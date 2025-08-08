@@ -22,7 +22,10 @@ def run_profile_farm(web_profile: Profile, profile_num: int):
         prompts_to_farm = random.randint(int(web_profile.prompts_limit * 0.8), web_profile.prompts_limit)
 
         for i in range(prompts_to_farm):
-            farm_prompt_point(web_profile)
+            try:
+                farm_prompt_point(web_profile)
+            except Exception as e:
+                logger.error(e)
 
         end_points = get_earned_points(web_profile)
 
@@ -70,49 +73,15 @@ def sign_in(web_profile):
                 if len(window_handles) == len(web_profile.driver.window_handles):
                     time.sleep(2)
                 else:
+                    while True:
+                        if len(window_handles) != len(web_profile.driver.window_handles):
+                            time.sleep(2)
+                        else:
+                            break
                     break
 
-            try:
-                web_profile.driver.switch_to.window(web_profile.driver.window_handles[-1])
-                account_element = wait_until_element_is_visible(web_profile, "xpath", "//li", 60)
-            except Exception as e:
-                if str(e).split("\n")[0] != "target window already closed from unknown error: web view not found":
-                    raise e
-
-            if len(window_handles) != len(web_profile.driver.window_handles):
-                account_element = wait_until_element_is_visible(web_profile, "xpath", "//li")
-                account_element.click()
-
-                # click on NEXT button on different languages
-                time.sleep(20)
-                next_german_elements = web_profile.driver.find_elements("xpath", "//span[text()='Weiter']")
-                next_ukrainian_elements = web_profile.driver.find_elements("xpath", "//span[text()='Продовжити']")
-                next_english_elements = web_profile.driver.find_elements("xpath", "//span[text()='Continue']")
-
-                if len(next_german_elements) != 0:
-                    next_german_elements[0].click()
-                elif len(next_ukrainian_elements) != 0:
-                    next_ukrainian_elements[0].click()
-                elif len(next_english_elements) != 0:
-                    next_english_elements[0].click()
-
-                # wait till the window for sign in is closed
-                while True:
-                    if len(window_handles) != len(web_profile.driver.window_handles):
-                        time.sleep(2)
-                    else:
-                        break
-
-                web_profile.driver.switch_to.window(mira_handle)
-                time.sleep(20)
-
-                next_elements = web_profile.driver.find_elements("xpath", "//button[text()=\"Let's go!\"]")
-                if len(next_elements) != 0:
-                    next_elements[0].click()
-                    wait_until_element_is_visible(web_profile, "xpath", "//button[text()='Close']").click()
-
             # check if signed in
-            web_profile.driver.find_element("xpath", "//textarea[@placeholder='Ask me anything ']")
+            wait_until_element_is_visible(web_profile, "xpath", "//textarea[@placeholder='Ask me anything ']")
             logger.info(f"Profile_id: {web_profile.profile_id}. Successfully logged in")
 
         else:
@@ -168,10 +137,12 @@ def get_earned_points(web_profile: Profile):
 
         points_presenting_element = wait_until_element_is_visible(web_profile, "xpath", "//div[text()='Total Mira Points']")
         points_presenting_xpath = get_full_xpath_element(web_profile.driver, points_presenting_element)
-        time.sleep(10)
 
-        points_element = wait_until_element_is_visible(web_profile, "xpath", points_presenting_xpath + "[2]")
-        points = int(points_element.text)
+        while True:
+            points_element = wait_until_element_is_visible(web_profile, "xpath", points_presenting_xpath + "[2]")
+            points = int(points_element.text)
+            if points != 0:
+                break
         return points
 
     except Exception as e:
