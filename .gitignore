@@ -1,0 +1,7 @@
+.idea
+data/*
+anaconda_projects
+profiles.csv
+logfile.log
+test.ipynb
+.env
